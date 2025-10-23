@@ -20,7 +20,7 @@ env/
 *.swp
 *.swo
 
-# PDF files (can be large)
+# PDF files (can be large) - but keep .txt files
 *.pdf
 
 # OS

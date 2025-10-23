@@ -8,10 +8,22 @@ import numpy as np
 app = Flask(__name__)
 
 # configuration
-# prefer a PDF named ilovepdf_merged.pdf in the project root if present
+# prefer a TXT file if present (faster), otherwise fall back to PDF
+ROOT_TXT = os.path.join(os.path.dirname(__file__), "ilovepdf_merged.txt")
 ROOT_PDF = os.path.join(os.path.dirname(__file__), "ilovepdf_merged.pdf")
 FALLBACK_PDF = os.path.join(os.path.dirname(__file__), "data", "document.pdf")
-DATA_PDF = ROOT_PDF if os.path.exists(ROOT_PDF) else FALLBACK_PDF
+
+# Check for text file first, then PDF
+if os.path.exists(ROOT_TXT):
+    DATA_FILE = ROOT_TXT
+    IS_PDF = False
+elif os.path.exists(ROOT_PDF):
+    DATA_FILE = ROOT_PDF
+    IS_PDF = True
+else:
+    DATA_FILE = FALLBACK_PDF
+    IS_PDF = True
+
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 GEMINI_API_KEY = "AIzaSyBzP6iPnrlVisRlOSRhXUGJYuIFIlspiiM"
 GEMINI_MODEL = "gemini-2.5-flash"  # most capable Gemini model
@@ -27,16 +39,22 @@ embedder = SentenceTransformer(EMBEDDING_MODEL)
 print("[2/4] Gemini API configured.")
 
 # load and prepare document
-if os.path.exists(DATA_PDF):
-    print(f"[3/4] Loading PDF: {DATA_PDF}")
-    full_text = load_pdf_text(DATA_PDF)
+if os.path.exists(DATA_FILE):
+    if IS_PDF:
+        print(f"[3/4] Loading PDF: {DATA_FILE}")
+        full_text = load_pdf_text(DATA_FILE)
+    else:
+        print(f"[3/4] Loading text file: {DATA_FILE}")
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            full_text = f.read()
+    
     print(f"[4/4] Chunking text (extracted {len(full_text)} characters)...")
     chunks = chunk_text(full_text, chunk_size=400, overlap=50)
     print(f"[4/4] Embedding {len(chunks)} chunks (this may take a minute)...")
     chunk_embeddings = embed_chunks(chunks, embedder)
-    print(f"✓ Ready! Serving {len(chunks)} chunks from PDF.")
+    print(f"✓ Ready! Serving {len(chunks)} chunks from document.")
 else:
-    print(f"[!] PDF not found at {DATA_PDF}. Starting without document context.")
+    print(f"[!] Document not found at {DATA_FILE}. Starting without document context.")
     full_text = ""
     chunks = []
     chunk_embeddings = np.array([])
