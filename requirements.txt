@@ -1,0 +1,6 @@
+flask
+google-generativeai
+sentence-transformers
+torch
+scikit-learn
+pypdf
