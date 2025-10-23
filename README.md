@@ -6,9 +6,7 @@ This is a minimal Flask web app that answers questions about a PDF placed at `da
 Setup
 ------
 
-1. Create a `data` folder next to `app.py` and put your PDF there as `document.pdf`:
-
-   - `c:\Users\anshu\OneDrive\Desktop\Kg_chatbot\data\document.pdf`
+1. Create a `data` folder next to `app.py` and put your PDF there as `document.pdf`
 
 2. Install dependencies (prefer a virtual environment):
 
