@@ -25,7 +25,7 @@ Behavior
 --------
 
 - If the question is unrelated to the PDF, the app returns "Out of context question" based on a similarity threshold.
-- Uses `sentence-transformers/all-MiniLM-L6-v2` for embeddings and `google/flan-t5-base` for generation.
+- Uses `sentence-transformers/all-MiniLM-L6-v2` for embeddings
 
 Notes
 -----
