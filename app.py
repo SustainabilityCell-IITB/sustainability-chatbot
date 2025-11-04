@@ -27,7 +27,7 @@ else:
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 GEMINI_API_KEY = "AIzaSyBzP6iPnrlVisRlOSRhXUGJYuIFIlspiiM"
 GEMINI_MODEL = "gemini-2.5-flash"  # most capable Gemini model
-SIMILARITY_THRESHOLD = 0.65  # tuned default; lower = more permissive
+SIMILARITY_THRESHOLD = 0.45  # lowered for more permissive matching
 
 # configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
@@ -72,8 +72,8 @@ def query():
     if not q:
         return jsonify({'error': 'empty query'}), 400
 
-    # find relevant chunks
-    top_chunks, top_scores = find_most_relevant_chunks(q, chunks, chunk_embeddings, embedder, top_k=3)
+    # find relevant chunks - using top 5 for more context
+    top_chunks, top_scores = find_most_relevant_chunks(q, chunks, chunk_embeddings, embedder, top_k=5)
     # if top score below threshold -> out of context
     if len(top_scores) == 0 or top_scores[0] < SIMILARITY_THRESHOLD:
         return jsonify({'answer': 'Out of context question'})
