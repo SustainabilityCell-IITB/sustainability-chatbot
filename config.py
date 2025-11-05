@@ -2,6 +2,10 @@
 Configuration settings for IIT Bombay Sustainability Cell Chatbot
 """
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,7 +18,7 @@ DOCUMENT_PATH = os.path.join(DATA_DIR, DOCUMENT_FILE)
 # Model settings
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_API_KEY = "AIzaSyBzP6iPnrlVisRlOSRhXUGJYuIFIlspiiM"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Load from environment variable
 
 # Text processing settings
 CHUNK_SIZE = 400
