@@ -1,16 +1,18 @@
 """
 Main entry point for IIT Bombay Sustainability Cell Chatbot
 """
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session
 import config
 from document_loader import load_document
 from text_processor import preprocess_document
 from embedder import create_embedder
 from retriever import create_retriever
 from llm_handler import create_llm_handler
+import secrets
 
 # Initialize Flask app
 app = Flask(__name__)
+app.secret_key = secrets.token_hex(16)  # For session management
 
 # Global variables for caching
 chunks = None
@@ -18,6 +20,9 @@ chunk_embeddings = None
 embedder = None
 retriever = None
 llm_handler = None
+
+# Store conversation histories (in production, use a database)
+conversations = {}
 
 
 def initialize_chatbot():
@@ -95,13 +100,24 @@ def initialize_chatbot():
 @app.route('/')
 def home():
     """Serve the chatbot UI"""
+    # Create a new session ID for each visitor
+    if 'session_id' not in session:
+        session['session_id'] = secrets.token_hex(8)
+        conversations[session['session_id']] = []
     return render_template('index.html')
 
 
 @app.route('/api/query', methods=['POST'])
 def query():
-    """Handle chatbot queries"""
+    """Handle chatbot queries with conversation history"""
     try:
+        # Get session ID
+        session_id = session.get('session_id')
+        if not session_id:
+            session_id = secrets.token_hex(8)
+            session['session_id'] = session_id
+            conversations[session_id] = []
+        
         # Get query from request
         data = request.json
         user_query = data.get('query', '').strip()
@@ -110,6 +126,9 @@ def query():
             return jsonify({'error': 'Query cannot be empty'}), 400
         
         print(f"\n[Query] {user_query}")
+        
+        # Get conversation history
+        conversation_history = conversations.get(session_id, [])
         
         # Embed the query
         query_embedding = embedder.embed_text(user_query)
@@ -128,10 +147,25 @@ def query():
         else:
             print(f"[Retrieval] No chunks above threshold ({config.SIMILARITY_THRESHOLD})")
         
-        # Generate response using LLM
-        response = llm_handler.generate_response(user_query, relevant_chunks)
+        # Generate response using LLM with conversation history
+        response = llm_handler.generate_response_with_history(
+            user_query, 
+            relevant_chunks,
+            conversation_history
+        )
         
         print(f"[Response] {response[:100]}..." if len(response) > 100 else f"[Response] {response}")
+        
+        # Store in conversation history
+        conversation_history.append({
+            'role': 'user',
+            'content': user_query
+        })
+        conversation_history.append({
+            'role': 'assistant',
+            'content': response
+        })
+        conversations[session_id] = conversation_history
         
         return jsonify({
             'response': response,
@@ -141,6 +175,18 @@ def query():
         
     except Exception as e:
         print(f"[Error] {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/clear', methods=['POST'])
+def clear_history():
+    """Clear conversation history"""
+    try:
+        session_id = session.get('session_id')
+        if session_id and session_id in conversations:
+            conversations[session_id] = []
+        return jsonify({'success': True})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
