@@ -3,7 +3,7 @@ Main entry point for IIT Bombay Sustainability Cell Chatbot
 """
 from flask import Flask, request, jsonify, render_template, session
 import config
-from document_loader import load_document
+from document_loader import load_all_sources
 from text_processor import preprocess_document
 from embedder import create_embedder
 from retriever import create_retriever
@@ -33,13 +33,18 @@ def initialize_chatbot():
     print("Initializing IIT Bombay Sustainability Cell Chatbot")
     print("=" * 60)
     
-    # Load document
-    print(f"\n1. Loading document from: {config.DOCUMENT_PATH}")
+    # Load documents from data folder and URLs
+    print(f"\n1. Loading documents from: {config.DATA_DIR}")
+    if config.WEBSITE_URLS:
+        print(f"   Also loading from {len(config.WEBSITE_URLS)} URL(s)")
     try:
-        text = load_document(config.DOCUMENT_PATH)
-        print(f"   [OK] Document loaded successfully ({len(text)} characters)")
+        text, sources = load_all_sources(config.DATA_DIR, config.WEBSITE_URLS)
+        print(f"   [OK] Loaded {len(sources['files'])} file(s): {', '.join(sources['files'])}")
+        if sources['urls']:
+            print(f"   [OK] Loaded {len(sources['urls'])} URL(s)")
+        print(f"   [OK] Total content: {len(text)} characters")
     except Exception as e:
-        print(f"   [ERROR] Error loading document: {e}")
+        print(f"   [ERROR] Error loading documents: {e}")
         raise
     
     # Chunk text
@@ -107,6 +112,38 @@ def home():
     return render_template('index.html')
 
 
+def build_contextual_query(user_query: str, conversation_history: list, max_context_turns: int = 2) -> str:
+    """
+    Build an enhanced query by including recent conversation context.
+    This helps with vague follow-up questions like "Tell me their names".
+    """
+    if not conversation_history:
+        return user_query
+
+    # Get the last few exchanges for context
+    recent_context = []
+    turn_count = 0
+
+    # Go through history in reverse to get most recent exchanges
+    for i in range(len(conversation_history) - 1, -1, -2):
+        if turn_count >= max_context_turns:
+            break
+        if i >= 1:
+            # Get user message (should be at even indices: 0, 2, 4...)
+            user_msg = conversation_history[i-1].get('content', '') if conversation_history[i-1].get('role') == 'user' else ''
+            if user_msg:
+                recent_context.insert(0, user_msg)
+                turn_count += 1
+
+    if recent_context:
+        # Combine recent context with current query for better retrieval
+        context_str = " ".join(recent_context)
+        enhanced_query = f"{context_str} {user_query}"
+        return enhanced_query
+
+    return user_query
+
+
 @app.route('/api/query', methods=['POST'])
 def query():
     """Handle chatbot queries with conversation history"""
@@ -117,22 +154,27 @@ def query():
             session_id = secrets.token_hex(8)
             session['session_id'] = session_id
             conversations[session_id] = []
-        
+
         # Get query from request
         data = request.json
         user_query = data.get('query', '').strip()
-        
+
         if not user_query:
             return jsonify({'error': 'Query cannot be empty'}), 400
-        
+
         print(f"\n[Query] {user_query}")
-        
+
         # Get conversation history
         conversation_history = conversations.get(session_id, [])
-        
-        # Embed the query
-        query_embedding = embedder.embed_text(user_query)
-        
+
+        # Build contextual query for better retrieval on follow-up questions
+        contextual_query = build_contextual_query(user_query, conversation_history)
+        if contextual_query != user_query:
+            print(f"[Context] Enhanced query: {contextual_query[:80]}...")
+
+        # Embed the contextual query for better retrieval
+        query_embedding = embedder.embed_text(contextual_query)
+
         # Retrieve relevant chunks
         relevant_chunks, scores = retriever.retrieve(
             query_embedding,

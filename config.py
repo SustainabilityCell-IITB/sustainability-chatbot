@@ -11,9 +11,14 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-# Document settings
-DOCUMENT_FILE = "ilovepdf_merged.txt"  # Name of the file in data folder
-DOCUMENT_PATH = os.path.join(DATA_DIR, DOCUMENT_FILE)
+# Website URLs to scrape (add your URLs here)
+# Example: WEBSITE_URLS = ["https://www.iitb.ac.in/sustainability", "https://example.com/page"]
+WEBSITE_URLS = [
+    # Add URLs here, e.g.:
+    # "https://www.iitb.ac.in/en/about-iit-bombay/sustainability",
+    "https://gesh.iitb.ac.in/",
+    "https://gymkhana.iitb.ac.in/~sustainabilitycell/"
+]
 
 # Model settings
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
@@ -25,10 +30,10 @@ CHUNK_SIZE = 400
 CHUNK_OVERLAP = 50
 
 # Retrieval settings
-TOP_K_CHUNKS = 5
-SIMILARITY_THRESHOLD = 0.45
+TOP_K_CHUNKS = 7
+SIMILARITY_THRESHOLD = 0.30  # Lower threshold for better recall
 
 # Server settings
 FLASK_HOST = "127.0.0.1"
 FLASK_PORT = 5000
-DEBUG_MODE = True
+DEBUG_MODE = True  # Server will auto-reload on file changes

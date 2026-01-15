@@ -26,8 +26,9 @@ env/
 *.swp
 *.swo
 
-# PDF files (can be large) - but keep .txt files
-*.pdf
+# PDF files outside data folder (keep data/*.pdf for knowledge base)
+/*.pdf
+/docs/*.pdf
 
 # OS
 .DS_Store
