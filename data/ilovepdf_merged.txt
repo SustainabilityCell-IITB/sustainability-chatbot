@@ -199,7 +199,7 @@ urinals, and collaborating with other institute bodies, staff, and students to
 achieve our goals. 
 
 TEAM 2024-25
- 
+
 Himank Gupta | Harshvardhan Jakher
 Shreyas Kulkarni | Ayadi Mishra | Swayamj Joshi | Anushka Kumari 
 Vedant Zanwar | Armaan Valecha | Madhav Agrawal | Savani Burgute
@@ -208,7 +208,7 @@ Heads, IITB Sustainability Cell
 Managers, IITB Sustainability Cell
 
 Conveners, IITB Sustainability Cell
-TEAM 2023-24  
+TEAM 2023-24
 Aryaman Seth
 Aayushman Sinha | Shreyash Gupta
 Achintya Bhobe | Muskan Bagaria | Sanika Landge 
@@ -402,7 +402,7 @@ to overcome the limitations of conventional
 sewage treatment plants by treating wastewater 
 in a more advanced, efficient, and modern 
 manner.
-   
+
 
 3: Sustainable Living
 
@@ -605,7 +605,7 @@ eco-friendliness. Abhyuday has initiated a
 nationwide tree plantation drive called “Grow Green 
 Gold” to combat deforestation.
 
- 
+
 Additionally, it conducts regular clean-up drives 
 at lakes and beaches, collecting a large quantity 
 of debris, thereby educating people about the 
@@ -696,7 +696,7 @@ security, and ‘Vajra - Threat Detection and
 Response in Linux End Points’, a ground-breaking 
 malware protection initiative.
 
- 
+
 6: Governance and 
 Global Partnerships
 
@@ -898,13 +898,13 @@ Abhyuday through ten
 successful food distribution 
 campaigns
 
-Anti-Hail Gun 
+Anti-Hail Gun
 Developed to protect crops from 
 hailstorms in Himachal Pradesh 
 (India's fruit basket) by 
 neutralizing cloud charges
 
-Stress Maps 
+Stress Maps
 At the plant level enable farmers 
 to distinguish between crop 
 water and nitrogen stress, and 
@@ -1070,21 +1070,21 @@ during their periods, and why menstrual
 cups are a game-changer. The session was 
 a step towards a more sustainable and 
 healthier future for women.
-SWC 
+SWC
 The Student Wellness Centre 
 provides free therapy and 
 counseling to help students 
 cope with stress, anxiety, 
 depression, and other mental 
-health issues  
-SMP 
+health issues
+SMP
 A robust Student Mentor 
 Program connects freshmen and 
 sophomores to select senior 
 students who help them 
 navigate through every aspect 
-of college life   
-KCDH 
+of college life 
+KCDH
 The Koita Centre for Digital 
 Health, first-of-its-kind in India, 
 is enabling an ecosystem to 
@@ -1150,7 +1150,7 @@ benefit areas like biomedical engineering,
 defense, security, manufacturing, power plants, 
 refineries, and medical equipment manufacturers.
  
-   
+
 Indoor air quality control 
 technology for parking lot
 
@@ -1506,7 +1506,7 @@ testing. The device's expected cost is INR
 impact the healthcare system, reduce the burden 
 on healthcare professionals, and facilitate faster 
 treatment. 
- 
+
 Indian leader of non-violent 
 independence against British rule
 

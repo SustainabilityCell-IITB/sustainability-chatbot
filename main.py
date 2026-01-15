@@ -37,54 +37,54 @@ def initialize_chatbot():
     print(f"\n1. Loading document from: {config.DOCUMENT_PATH}")
     try:
         text = load_document(config.DOCUMENT_PATH)
-        print(f"   ✓ Document loaded successfully ({len(text)} characters)")
+        print(f"   [OK] Document loaded successfully ({len(text)} characters)")
     except Exception as e:
-        print(f"   ✗ Error loading document: {e}")
+        print(f"   [ERROR] Error loading document: {e}")
         raise
     
     # Chunk text
     print(f"\n2. Chunking text (size={config.CHUNK_SIZE}, overlap={config.CHUNK_OVERLAP})")
     try:
         chunks = preprocess_document(text, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
-        print(f"   ✓ Created {len(chunks)} chunks")
+        print(f"   [OK] Created {len(chunks)} chunks")
     except Exception as e:
-        print(f"   ✗ Error chunking text: {e}")
+        print(f"   [ERROR] Error chunking text: {e}")
         raise
     
     # Create embedder
     print(f"\n3. Initializing embedding model: {config.EMBEDDING_MODEL}")
     try:
         embedder = create_embedder(config.EMBEDDING_MODEL)
-        print(f"   ✓ Embedder initialized")
+        print(f"   [OK] Embedder initialized")
     except Exception as e:
-        print(f"   ✗ Error initializing embedder: {e}")
+        print(f"   [ERROR] Error initializing embedder: {e}")
         raise
     
     # Generate embeddings
     print(f"\n4. Generating embeddings for {len(chunks)} chunks")
     try:
         chunk_embeddings = embedder.embed_texts(chunks)
-        print(f"   ✓ Embeddings generated (shape: {chunk_embeddings.shape})")
+        print(f"   [OK] Embeddings generated (shape: {chunk_embeddings.shape})")
     except Exception as e:
-        print(f"   ✗ Error generating embeddings: {e}")
+        print(f"   [ERROR] Error generating embeddings: {e}")
         raise
     
     # Create retriever
     print(f"\n5. Initializing retriever")
     try:
         retriever = create_retriever(chunks, chunk_embeddings)
-        print(f"   ✓ Retriever initialized")
+        print(f"   [OK] Retriever initialized")
     except Exception as e:
-        print(f"   ✗ Error initializing retriever: {e}")
+        print(f"   [ERROR] Error initializing retriever: {e}")
         raise
     
     # Create LLM handler
     print(f"\n6. Initializing LLM: {config.GEMINI_MODEL}")
     try:
         llm_handler = create_llm_handler(config.GEMINI_API_KEY, config.GEMINI_MODEL)
-        print(f"   ✓ LLM handler initialized")
+        print(f"   [OK] LLM handler initialized")
     except Exception as e:
-        print(f"   ✗ Error initializing LLM: {e}")
+        print(f"   [ERROR] Error initializing LLM: {e}")
         raise
     
     print("\n" + "=" * 60)
