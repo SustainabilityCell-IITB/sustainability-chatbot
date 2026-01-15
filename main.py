@@ -83,10 +83,17 @@ def initialize_chatbot():
         print(f"   [ERROR] Error initializing retriever: {e}")
         raise
     
-    # Create LLM handler
-    print(f"\n6. Initializing LLM: {config.GEMINI_MODEL}")
+    # Create LLM handler based on provider
+    if config.LLM_PROVIDER == "groq":
+        model_name = config.GROQ_MODEL
+        api_key = config.GROQ_API_KEY
+    else:
+        model_name = config.GEMINI_MODEL
+        api_key = config.GEMINI_API_KEY
+
+    print(f"\n6. Initializing LLM: {model_name} ({config.LLM_PROVIDER})")
     try:
-        llm_handler = create_llm_handler(config.GEMINI_API_KEY, config.GEMINI_MODEL)
+        llm_handler = create_llm_handler(api_key, model_name, config.LLM_PROVIDER)
         print(f"   [OK] LLM handler initialized")
     except Exception as e:
         print(f"   [ERROR] Error initializing LLM: {e}")

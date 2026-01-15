@@ -22,8 +22,17 @@ WEBSITE_URLS = [
 
 # Model settings
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+# LLM Provider: "groq" or "gemini"
+LLM_PROVIDER = "groq"
+
+# Groq settings (recommended - fast and free)
+GROQ_MODEL = "llama-3.3-70b-versatile"  # Best quality model on Groq
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+
+# Gemini settings (backup)
 GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Load from environment variable
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Text processing settings
 CHUNK_SIZE = 400
