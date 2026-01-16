@@ -1,7 +1,8 @@
 """
-Text processing module for chunking documents
+Text processing module for chunking documents with source tracking
 """
-from typing import List
+from typing import List, Tuple
+import re
 
 
 def chunk_text(text: str, chunk_size: int = 400, overlap: int = 50) -> List[str]:
@@ -69,15 +70,134 @@ def clean_text(text: str) -> str:
 def preprocess_document(text: str, chunk_size: int = 400, overlap: int = 50) -> List[str]:
     """
     Preprocess document: clean and chunk.
-    
+
     Args:
         text: Input document text
         chunk_size: Maximum size of each chunk
         overlap: Overlap between chunks
-        
+
     Returns:
         List of processed text chunks
     """
     cleaned_text = clean_text(text)
     chunks = chunk_text(cleaned_text, chunk_size, overlap)
     return chunks
+
+
+def extract_source_from_text(text: str) -> str:
+    """
+    Extract the source name from text content markers.
+    Looks for patterns like '--- Content from: filename ---'
+
+    Args:
+        text: Text that may contain source markers
+
+    Returns:
+        Source name or 'Unknown' if not found
+    """
+    # Look for the source marker pattern
+    pattern = r'---\s*Content from:\s*([^-]+)\s*---'
+    match = re.search(pattern, text)
+    if match:
+        return match.group(1).strip()
+    return "Unknown"
+
+
+def chunk_text_with_sources(text: str, chunk_size: int = 400, overlap: int = 50) -> Tuple[List[str], List[str]]:
+    """
+    Split text into overlapping chunks while tracking source files.
+
+    Args:
+        text: Input text to chunk (with source markers)
+        chunk_size: Maximum size of each chunk in characters
+        overlap: Number of characters to overlap between chunks
+
+    Returns:
+        Tuple of (list of chunks, list of source names for each chunk)
+    """
+    # First, split by source markers to track which source each section belongs to
+    source_pattern = r'---\s*Content from:\s*([^-]+)\s*---'
+
+    # Find all source markers and their positions
+    markers = list(re.finditer(source_pattern, text))
+
+    if not markers:
+        # No source markers, return regular chunks with 'Unknown' source
+        chunks = chunk_text(text, chunk_size, overlap)
+        sources = ['Unknown'] * len(chunks)
+        return chunks, sources
+
+    # Build a list of (start_pos, end_pos, source_name) for each section
+    sections = []
+    for i, match in enumerate(markers):
+        source_name = match.group(1).strip()
+        start_pos = match.end()
+
+        # End position is the start of the next marker, or end of text
+        if i + 1 < len(markers):
+            end_pos = markers[i + 1].start()
+        else:
+            end_pos = len(text)
+
+        sections.append((start_pos, end_pos, source_name))
+
+    # Now chunk the entire text and assign sources based on position
+    chunks = []
+    sources = []
+    start = 0
+    text_length = len(text)
+
+    while start < text_length:
+        end = min(start + chunk_size, text_length)
+        chunk = text[start:end].strip()
+
+        # Clean out source markers from the chunk
+        chunk = re.sub(source_pattern, '', chunk).strip()
+
+        if chunk:
+            # Determine which source this chunk belongs to
+            chunk_mid = (start + end) // 2
+            source = 'Unknown'
+            for sec_start, sec_end, sec_source in sections:
+                if sec_start <= chunk_mid < sec_end:
+                    source = sec_source
+                    break
+
+            chunks.append(chunk)
+            sources.append(source)
+
+        step = chunk_size - overlap
+        if step <= 0:
+            step = 1
+        start += step
+
+    return chunks, sources
+
+
+def preprocess_document_with_sources(text: str, chunk_size: int = 400, overlap: int = 50) -> Tuple[List[str], List[str]]:
+    """
+    Preprocess document: clean and chunk while tracking sources.
+
+    Args:
+        text: Input document text with source markers
+        chunk_size: Maximum size of each chunk
+        overlap: Overlap between chunks
+
+    Returns:
+        Tuple of (list of chunks, list of source names)
+    """
+    # Don't clean text first as it removes source markers
+    chunks, sources = chunk_text_with_sources(text, chunk_size, overlap)
+
+    # Clean each chunk individually
+    cleaned_chunks = [clean_text(chunk) for chunk in chunks]
+
+    # Filter out empty chunks
+    result_chunks = []
+    result_sources = []
+    for chunk, source in zip(cleaned_chunks, sources):
+        if chunk:
+            result_chunks.append(chunk)
+            result_sources.append(source)
+
+    return result_chunks, result_sources

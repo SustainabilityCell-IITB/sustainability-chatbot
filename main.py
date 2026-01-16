@@ -4,11 +4,63 @@ Main entry point for IIT Bombay Sustainability Cell Chatbot
 from flask import Flask, request, jsonify, render_template, session
 import config
 from document_loader import load_all_sources
-from text_processor import preprocess_document
+from text_processor import preprocess_document_with_sources
 from embedder import create_embedder
 from retriever import create_retriever
 from llm_handler import create_llm_handler
+from cache_manager import create_cache_manager
 import secrets
+import time
+import re
+
+# Input validation constants
+MAX_QUERY_LENGTH = 1000  # Maximum characters allowed
+MIN_QUERY_LENGTH = 2     # Minimum characters required
+
+
+def sanitize_query(query: str) -> tuple:
+    """
+    Sanitize and validate user input.
+
+    Args:
+        query: Raw user input
+
+    Returns:
+        Tuple of (sanitized_query, error_message)
+        If error_message is not None, the query is invalid
+    """
+    if not query:
+        return None, "Query cannot be empty"
+
+    # Remove null bytes and other control characters
+    query = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', query)
+
+    # Strip whitespace and normalize spaces
+    query = ' '.join(query.split())
+
+    # Check length constraints
+    if len(query) < MIN_QUERY_LENGTH:
+        return None, "Query is too short. Please ask a complete question."
+
+    if len(query) > MAX_QUERY_LENGTH:
+        return None, f"Query is too long. Please keep it under {MAX_QUERY_LENGTH} characters."
+
+    # Remove potential prompt injection patterns (basic protection)
+    # This catches attempts to override system prompts
+    injection_patterns = [
+        r'ignore\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?)',
+        r'disregard\s+(all\s+)?(previous|above|prior)',
+        r'you\s+are\s+now\s+in\s+',
+        r'new\s+instructions?:',
+        r'system\s*:\s*',
+    ]
+
+    query_lower = query.lower()
+    for pattern in injection_patterns:
+        if re.search(pattern, query_lower):
+            return None, "Invalid query format. Please ask a genuine question."
+
+    return query, None
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -16,6 +68,7 @@ app.secret_key = secrets.token_hex(16)  # For session management
 
 # Global variables for caching
 chunks = None
+chunk_sources = None
 chunk_embeddings = None
 embedder = None
 retriever = None
@@ -27,12 +80,17 @@ conversations = {}
 
 def initialize_chatbot():
     """Initialize all chatbot components"""
-    global chunks, chunk_embeddings, embedder, retriever, llm_handler
-    
+    global chunks, chunk_sources, chunk_embeddings, embedder, retriever, llm_handler
+
+    start_time = time.time()
+
     print("=" * 60)
     print("Initializing IIT Bombay Sustainability Cell Chatbot")
     print("=" * 60)
-    
+
+    # Initialize cache manager
+    cache_manager = create_cache_manager()
+
     # Load documents from data folder and URLs
     print(f"\n1. Loading documents from: {config.DATA_DIR}")
     if config.WEBSITE_URLS:
@@ -46,43 +104,73 @@ def initialize_chatbot():
     except Exception as e:
         print(f"   [ERROR] Error loading documents: {e}")
         raise
+
+    # Check if we can use cached embeddings
+    print(f"\n2. Checking embedding cache...")
+    cache_valid = cache_manager.is_cache_valid(
+        text, config.CHUNK_SIZE, config.CHUNK_OVERLAP, config.EMBEDDING_MODEL
+    )
+
+    if cache_valid:
+        print("   [OK] Valid cache found! Loading from cache...")
+        cached_data = cache_manager.load_cache()
+        if cached_data:
+            chunks, chunk_sources, chunk_embeddings = cached_data
+            print(f"   [OK] Loaded {len(chunks)} chunks from cache")
+            print(f"   [OK] Loaded embeddings (shape: {chunk_embeddings.shape})")
+
+            # Still need to initialize embedder for query embedding
+            print(f"\n3. Initializing embedding model: {config.EMBEDDING_MODEL}")
+            embedder = create_embedder(config.EMBEDDING_MODEL)
+            print(f"   [OK] Embedder initialized")
+        else:
+            cache_valid = False  # Cache load failed, regenerate
+
+    if not cache_valid:
+        # Chunk text with source tracking
+        print(f"\n2. Chunking text (size={config.CHUNK_SIZE}, overlap={config.CHUNK_OVERLAP})")
+        try:
+            chunks, chunk_sources = preprocess_document_with_sources(text, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
+            print(f"   [OK] Created {len(chunks)} chunks with source tracking")
+        except Exception as e:
+            print(f"   [ERROR] Error chunking text: {e}")
+            raise
+
+        # Create embedder
+        print(f"\n3. Initializing embedding model: {config.EMBEDDING_MODEL}")
+        try:
+            embedder = create_embedder(config.EMBEDDING_MODEL)
+            print(f"   [OK] Embedder initialized")
+        except Exception as e:
+            print(f"   [ERROR] Error initializing embedder: {e}")
+            raise
+
+        # Generate embeddings
+        print(f"\n4. Generating embeddings for {len(chunks)} chunks")
+        try:
+            chunk_embeddings = embedder.embed_texts(chunks)
+            print(f"   [OK] Embeddings generated (shape: {chunk_embeddings.shape})")
+        except Exception as e:
+            print(f"   [ERROR] Error generating embeddings: {e}")
+            raise
+
+        # Save to cache for next startup
+        print(f"\n5. Saving to cache...")
+        cache_manager.save_cache(
+            chunks, chunk_sources, chunk_embeddings,
+            text, config.CHUNK_SIZE, config.CHUNK_OVERLAP, config.EMBEDDING_MODEL
+        )
     
-    # Chunk text
-    print(f"\n2. Chunking text (size={config.CHUNK_SIZE}, overlap={config.CHUNK_OVERLAP})")
+    # Create retriever with source tracking
+    step = 6 if not cache_valid else 4
+    print(f"\n{step}. Initializing retriever")
     try:
-        chunks = preprocess_document(text, config.CHUNK_SIZE, config.CHUNK_OVERLAP)
-        print(f"   [OK] Created {len(chunks)} chunks")
-    except Exception as e:
-        print(f"   [ERROR] Error chunking text: {e}")
-        raise
-    
-    # Create embedder
-    print(f"\n3. Initializing embedding model: {config.EMBEDDING_MODEL}")
-    try:
-        embedder = create_embedder(config.EMBEDDING_MODEL)
-        print(f"   [OK] Embedder initialized")
-    except Exception as e:
-        print(f"   [ERROR] Error initializing embedder: {e}")
-        raise
-    
-    # Generate embeddings
-    print(f"\n4. Generating embeddings for {len(chunks)} chunks")
-    try:
-        chunk_embeddings = embedder.embed_texts(chunks)
-        print(f"   [OK] Embeddings generated (shape: {chunk_embeddings.shape})")
-    except Exception as e:
-        print(f"   [ERROR] Error generating embeddings: {e}")
-        raise
-    
-    # Create retriever
-    print(f"\n5. Initializing retriever")
-    try:
-        retriever = create_retriever(chunks, chunk_embeddings)
-        print(f"   [OK] Retriever initialized")
+        retriever = create_retriever(chunks, chunk_embeddings, chunk_sources=chunk_sources)
+        print(f"   [OK] Retriever initialized with source tracking")
     except Exception as e:
         print(f"   [ERROR] Error initializing retriever: {e}")
         raise
-    
+
     # Create LLM handler based on provider
     if config.LLM_PROVIDER == "groq":
         model_name = config.GROQ_MODEL
@@ -91,14 +179,18 @@ def initialize_chatbot():
         model_name = config.GEMINI_MODEL
         api_key = config.GEMINI_API_KEY
 
-    print(f"\n6. Initializing LLM: {model_name} ({config.LLM_PROVIDER})")
+    step += 1
+    print(f"\n{step}. Initializing LLM: {model_name} ({config.LLM_PROVIDER})")
     try:
         llm_handler = create_llm_handler(api_key, model_name, config.LLM_PROVIDER)
         print(f"   [OK] LLM handler initialized")
     except Exception as e:
         print(f"   [ERROR] Error initializing LLM: {e}")
         raise
-    
+
+    # Calculate startup time
+    startup_time = time.time() - start_time
+
     print("\n" + "=" * 60)
     print("Chatbot initialized successfully!")
     print("=" * 60)
@@ -106,6 +198,7 @@ def initialize_chatbot():
     print(f"  - Top-k chunks: {config.TOP_K_CHUNKS}")
     print(f"  - Similarity threshold: {config.SIMILARITY_THRESHOLD}")
     print(f"  - Server: http://{config.FLASK_HOST}:{config.FLASK_PORT}")
+    print(f"  - Startup time: {startup_time:.2f} seconds" + (" (cached)" if cache_valid else ""))
     print("=" * 60 + "\n")
 
 
@@ -164,10 +257,13 @@ def query():
 
         # Get query from request
         data = request.json
-        user_query = data.get('query', '').strip()
+        raw_query = data.get('query', '')
 
-        if not user_query:
-            return jsonify({'error': 'Query cannot be empty'}), 400
+        # Sanitize and validate input
+        user_query, error = sanitize_query(raw_query)
+        if error:
+            print(f"\n[Rejected] {error} | Input: {raw_query[:50]}...")
+            return jsonify({'error': error}), 400
 
         print(f"\n[Query] {user_query}")
 
@@ -182,26 +278,43 @@ def query():
         # Embed the contextual query for better retrieval
         query_embedding = embedder.embed_text(contextual_query)
 
-        # Retrieve relevant chunks
-        relevant_chunks, scores = retriever.retrieve(
+        # Retrieve relevant chunks using hybrid search (semantic + BM25)
+        relevant_chunks, scores, sources = retriever.retrieve(
             query_embedding,
             top_k=config.TOP_K_CHUNKS,
-            threshold=config.SIMILARITY_THRESHOLD
+            threshold=config.SIMILARITY_THRESHOLD,
+            query_text=contextual_query
         )
-        
+
+        # Check if we found relevant context
+        max_score = scores[0] if scores else 0.0
+        use_fallback = False
+
         if relevant_chunks:
             print(f"[Retrieval] Found {len(relevant_chunks)} relevant chunks")
-            for i, score in enumerate(scores, 1):
-                print(f"  Chunk {i}: similarity = {score:.4f}")
+            for i, (score, source) in enumerate(zip(scores, sources), 1):
+                print(f"  Chunk {i}: similarity = {score:.4f} | Source: {source}")
+
+            # Use fallback if best score is very low (poor relevance)
+            if max_score < 0.35:
+                use_fallback = True
+                print(f"[Fallback] Low relevance score ({max_score:.4f}), using fallback response")
         else:
             print(f"[Retrieval] No chunks above threshold ({config.SIMILARITY_THRESHOLD})")
-        
-        # Generate response using LLM with conversation history
-        response = llm_handler.generate_response_with_history(
-            user_query, 
-            relevant_chunks,
-            conversation_history
-        )
+            use_fallback = True
+
+        # Generate response - use fallback for low relevance queries
+        if use_fallback:
+            response = llm_handler.generate_fallback_response(
+                user_query,
+                conversation_history
+            )
+        else:
+            response = llm_handler.generate_response_with_history(
+                user_query,
+                relevant_chunks,
+                conversation_history
+            )
         
         print(f"[Response] {response[:100]}..." if len(response) > 100 else f"[Response] {response}")
         
@@ -216,10 +329,14 @@ def query():
         })
         conversations[session_id] = conversation_history
         
+        # Get unique sources for citation
+        unique_sources = list(dict.fromkeys(sources)) if sources else []
+
         return jsonify({
             'response': response,
             'num_chunks_used': len(relevant_chunks),
-            'max_similarity': float(scores[0]) if scores else 0.0
+            'max_similarity': float(scores[0]) if scores else 0.0,
+            'sources': unique_sources
         })
         
     except Exception as e:

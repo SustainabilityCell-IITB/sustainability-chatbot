@@ -300,18 +300,50 @@
       }
       
       .message-meta {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         color: #7f8c8d;
-        margin-top: 0.4rem;
-        padding: 0 0.25rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8faf9;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .message-meta-stats {
         display: flex;
         align-items: center;
         gap: 0.5rem;
       }
-      
-      .message-meta::before {
+
+      .message-meta-stats::before {
         content: '•';
         color: #4ca96e;
+      }
+
+      .message-sources {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.15rem;
+      }
+
+      .source-tag {
+        background: #e8f5e9;
+        color: #2d8659;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .source-tag::before {
+        content: '📄 ';
       }
       
       .typing-indicator {
@@ -620,17 +652,31 @@
           <h2>Welcome to Sustainability Cell!</h2>
           <p>I'm your AI assistant for all sustainability-related queries at IIT Bombay. Ask me about our initiatives, policies, events, and environmental projects.</p>
           <div class="suggestion-chips">
-            <div class="suggestion-chip" onclick="sendSuggestion('What sustainability initiatives does IIT Bombay have?')">
-              Sustainability initiatives
+            <div class="suggestion-chip" onclick="sendSuggestion('What is the Sustainability Cell?')">
+              About Sustainability Cell
             </div>
-            <div class="suggestion-chip" onclick="sendSuggestion('Tell me about waste management programs')">
-              Waste management
+            <div class="suggestion-chip" onclick="sendSuggestion('Who are the current team members of Sustainability Cell?')">
+              Current Team 2024-25
             </div>
-            <div class="suggestion-chip" onclick="sendSuggestion('What green building practices are implemented?')">
-              Green buildings
+            <div class="suggestion-chip" onclick="sendSuggestion('What events does Sustainability Cell organize?')">
+              Events & Competitions
             </div>
-            <div class="suggestion-chip" onclick="sendSuggestion('How can I contribute to campus sustainability?')">
-              Get involved
+            <div class="suggestion-chip" onclick="sendSuggestion('What is the Green Cup initiative?')">
+              Green Cup Initiative
+            </div>
+          </div>
+          <div class="suggestion-chips" style="margin-top: 0.5rem;">
+            <div class="suggestion-chip" onclick="sendSuggestion('What is the GESH Fellowship?')">
+              GESH Fellowship
+            </div>
+            <div class="suggestion-chip" onclick="sendSuggestion('How can I contact Sustainability Cell?')">
+              Contact Info
+            </div>
+            <div class="suggestion-chip" onclick="sendSuggestion('What campus sustainability projects have been implemented?')">
+              Campus Projects
+            </div>
+            <div class="suggestion-chip" onclick="sendSuggestion('How can I join Sustainability Cell?')">
+              How to Join
             </div>
           </div>
         </div>
@@ -681,7 +727,7 @@
         sendMessage();
       }
 
-      function addMessage(content, role, meta = null) {
+      function addMessage(content, role, meta = null, sources = null) {
         // Hide empty state
         if (emptyState) {
           emptyState.style.display = 'none';
@@ -689,34 +735,58 @@
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}`;
-        
+
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
         avatar.innerHTML = role === 'user' ? '👤' : '🌿';
-        
+
         const contentDiv = document.createElement('div');
         const textDiv = document.createElement('div');
         textDiv.className = 'message-content';
-        
+
         // Render markdown for assistant messages, plain text for user
         if (role === 'assistant') {
           textDiv.innerHTML = marked.parse(content);
         } else {
           textDiv.textContent = content;
         }
-        
+
         contentDiv.appendChild(textDiv);
-        
+
         if (meta && role === 'assistant') {
           const metaDiv = document.createElement('div');
           metaDiv.className = 'message-meta';
-          metaDiv.textContent = meta;
+
+          // Stats row
+          const statsDiv = document.createElement('div');
+          statsDiv.className = 'message-meta-stats';
+          statsDiv.textContent = meta;
+          metaDiv.appendChild(statsDiv);
+
+          // Sources row (if available)
+          if (sources && sources.length > 0) {
+            const sourcesDiv = document.createElement('div');
+            sourcesDiv.className = 'message-sources';
+            sources.forEach(source => {
+              if (source && source !== 'Unknown') {
+                const sourceTag = document.createElement('span');
+                sourceTag.className = 'source-tag';
+                sourceTag.textContent = source;
+                sourceTag.title = source; // Show full name on hover
+                sourcesDiv.appendChild(sourceTag);
+              }
+            });
+            if (sourcesDiv.children.length > 0) {
+              metaDiv.appendChild(sourcesDiv);
+            }
+          }
+
           contentDiv.appendChild(metaDiv);
         }
-        
+
         messageDiv.appendChild(avatar);
         messageDiv.appendChild(contentDiv);
-        
+
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
@@ -777,8 +847,7 @@
           if (data.error) {
             addMessage('❌ Error: ' + data.error, 'assistant');
           } else {
-            const meta = `${data.num_chunks_used} chunks • ${(data.max_similarity * 100).toFixed(1)}% similarity`;
-            addMessage(data.response, 'assistant', meta);
+            addMessage(data.response, 'assistant');
           }
         } catch (error) {
           hideTypingIndicator();
@@ -805,17 +874,31 @@
               <h2>Welcome to Sustainability Cell!</h2>
               <p>I'm your AI assistant for all sustainability-related queries at IIT Bombay. Ask me about our initiatives, policies, events, and environmental projects.</p>
               <div class="suggestion-chips">
-                <div class="suggestion-chip" onclick="sendSuggestion('What sustainability initiatives does IIT Bombay have?')">
-                  Sustainability initiatives
+                <div class="suggestion-chip" onclick="sendSuggestion('What is the Sustainability Cell?')">
+                  About Sustainability Cell
                 </div>
-                <div class="suggestion-chip" onclick="sendSuggestion('Tell me about waste management programs')">
-                  Waste management
+                <div class="suggestion-chip" onclick="sendSuggestion('Who are the current team members of Sustainability Cell?')">
+                  Current Team 2024-25
                 </div>
-                <div class="suggestion-chip" onclick="sendSuggestion('What green building practices are implemented?')">
-                  Green buildings
+                <div class="suggestion-chip" onclick="sendSuggestion('What events does Sustainability Cell organize?')">
+                  Events & Competitions
                 </div>
-                <div class="suggestion-chip" onclick="sendSuggestion('How can I contribute to campus sustainability?')">
-                  Get involved
+                <div class="suggestion-chip" onclick="sendSuggestion('What is the Green Cup initiative?')">
+                  Green Cup Initiative
+                </div>
+              </div>
+              <div class="suggestion-chips" style="margin-top: 0.5rem;">
+                <div class="suggestion-chip" onclick="sendSuggestion('What is the GESH Fellowship?')">
+                  GESH Fellowship
+                </div>
+                <div class="suggestion-chip" onclick="sendSuggestion('How can I contact Sustainability Cell?')">
+                  Contact Info
+                </div>
+                <div class="suggestion-chip" onclick="sendSuggestion('What campus sustainability projects have been implemented?')">
+                  Campus Projects
+                </div>
+                <div class="suggestion-chip" onclick="sendSuggestion('How can I join Sustainability Cell?')">
+                  How to Join
                 </div>
               </div>
             </div>

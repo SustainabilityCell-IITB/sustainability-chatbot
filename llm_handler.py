@@ -29,12 +29,38 @@ class LLMHandler:
             genai.configure(api_key=api_key)
             self.client = genai.GenerativeModel(model_name)
 
+    def _get_system_prompt(self) -> str:
+        """Get the enhanced system prompt for better response quality"""
+        return """You are the official AI assistant for IIT Bombay's Sustainability Cell. Your role is to help students, faculty, and visitors learn about sustainability initiatives on campus.
+
+PERSONALITY & TONE:
+- Be friendly, approachable, and enthusiastic about sustainability
+- Keep responses concise and well-structured (use bullet points for lists)
+- Be professional but not overly formal
+
+RESPONSE GUIDELINES:
+- Answer directly and get to the point quickly
+- Use bullet points or numbered lists for multiple items
+- If listing team members, events, or initiatives, format them clearly
+- Keep responses under 200 words unless more detail is specifically requested
+- If information is not available in the context, say so honestly
+
+FORMATTING:
+- Use **bold** for important names, dates, or key terms
+- Use bullet points for lists of 3+ items
+- Break long responses into short paragraphs
+
+ABOUT SUSTAINABILITY CELL:
+- Part of IIT Bombay's student body (Gymkhana)
+- Focuses on campus sustainability, environmental awareness, and green initiatives
+- Organizes events like Green Cup, ISR (Institute Sustainability Report), and workshops"""
+
     def _generate_groq(self, prompt: str, max_tokens: int = 1024) -> str:
         """Generate response using Groq API"""
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant for IIT Bombay's Sustainability Cell. Be conversational and friendly while staying professional."},
+                {"role": "system", "content": self._get_system_prompt()},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=max_tokens,
@@ -173,6 +199,53 @@ Answer (maximum {max_length} words):"""
                 return self._generate_gemini(prompt)
         except Exception as e:
             return f"Error: {str(e)}"
+
+
+    def generate_fallback_response(self, query: str, conversation_history: List[dict] = None) -> str:
+        """
+        Generate a helpful fallback response when no relevant context is found.
+        Suggests related topics the user might want to ask about.
+
+        Args:
+            query: User's question
+            conversation_history: Previous conversation messages
+
+        Returns:
+            Helpful fallback response with suggestions
+        """
+        # Build history string if available
+        history_str = ""
+        if conversation_history:
+            recent_history = conversation_history[-4:]
+            for msg in recent_history:
+                role = "User" if msg['role'] == 'user' else "Assistant"
+                history_str += f"{role}: {msg['content']}\n"
+
+        prompt = f"""The user asked a question but I couldn't find specific information about it in our knowledge base.
+
+User's Question: {query}
+
+{f"Conversation History:{chr(10)}{history_str}" if history_str else ""}
+
+Please provide a helpful response that:
+1. Acknowledges you don't have specific information about their query
+2. Briefly explains what Sustainability Cell does (if relevant)
+3. Suggests 2-3 related topics they CAN ask about, such as:
+   - Team members and structure
+   - Events (Green Cup, workshops, competitions)
+   - GESH Fellowship program
+   - Campus sustainability projects
+   - How to join or contact Sustainability Cell
+
+Keep the response friendly and under 100 words."""
+
+        try:
+            if self.provider == "groq":
+                return self._generate_groq(prompt, max_tokens=512)
+            else:
+                return self._generate_gemini(prompt)
+        except Exception as e:
+            return "I don't have specific information about that. You can ask me about Sustainability Cell's team, events like Green Cup, the GESH Fellowship, or how to get involved!"
 
 
 def create_llm_handler(api_key: str, model_name: str, provider: str = "groq") -> LLMHandler:
