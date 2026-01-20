@@ -3,6 +3,20 @@ LLM handler module for interacting with Groq or Google Gemini API
 """
 from typing import List, Optional
 from groq import Groq
+import time
+
+
+def retry_with_backoff(func, max_retries=3, initial_delay=1):
+    """Retry a function with exponential backoff."""
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise e
+            delay = initial_delay * (2 ** attempt)
+            print(f"[Retry] Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
+            time.sleep(delay)
 
 
 class LLMHandler:
@@ -56,17 +70,20 @@ ABOUT SUSTAINABILITY CELL:
 - Organizes events like Green Cup, ISR (Institute Sustainability Report), and workshops"""
 
     def _generate_groq(self, prompt: str, max_tokens: int = 1024) -> str:
-        """Generate response using Groq API"""
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "system", "content": self._get_system_prompt()},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=max_tokens,
-            temperature=0.7
-        )
-        return response.choices[0].message.content.strip()
+        """Generate response using Groq API with retry logic"""
+        def make_request():
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": self._get_system_prompt()},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=0.7
+            )
+            return response.choices[0].message.content.strip()
+
+        return retry_with_backoff(make_request, max_retries=3, initial_delay=2)
 
     def _generate_gemini(self, prompt: str) -> str:
         """Generate response using Gemini API"""
