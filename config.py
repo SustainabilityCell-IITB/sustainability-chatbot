@@ -43,6 +43,9 @@ TOP_K_CHUNKS = 7
 SIMILARITY_THRESHOLD = 0.30  # Lower threshold for better recall
 
 # Server settings
-FLASK_HOST = "127.0.0.1"
-FLASK_PORT = 5000
-DEBUG_MODE = True  # Server will auto-reload on file changes
+FLASK_HOST = os.getenv("HOST", "0.0.0.0")  # 0.0.0.0 for production
+FLASK_PORT = int(os.getenv("PORT", 5000))  # Render uses PORT env var
+DEBUG_MODE = os.getenv("FLASK_ENV", "development") == "development"
+
+# CORS settings - allowed origins for cross-origin requests
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")  # Comma-separated list or "*" for all

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: sustainability-chatbot-api
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"

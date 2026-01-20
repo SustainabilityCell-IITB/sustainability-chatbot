@@ -2,6 +2,7 @@
 Main entry point for IIT Bombay Sustainability Cell Chatbot
 """
 from flask import Flask, request, jsonify, render_template, session
+from flask_cors import CORS
 import config
 from document_loader import load_all_sources
 from text_processor import preprocess_document_with_sources
@@ -65,6 +66,9 @@ def sanitize_query(query: str) -> tuple:
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)  # For session management
+
+# Enable CORS for cross-origin requests (needed when frontend is on different domain)
+CORS(app, origins=config.ALLOWED_ORIGINS, supports_credentials=True)
 
 # Global variables for caching
 chunks = None
@@ -248,16 +252,18 @@ def build_contextual_query(user_query: str, conversation_history: list, max_cont
 def query():
     """Handle chatbot queries with conversation history"""
     try:
-        # Get session ID
-        session_id = session.get('session_id')
-        if not session_id:
-            session_id = secrets.token_hex(8)
-            session['session_id'] = session_id
-            conversations[session_id] = []
-
         # Get query from request
         data = request.json
         raw_query = data.get('query', '')
+
+        # Get session ID - support both Flask session and request body (for CORS)
+        session_id = data.get('session_id') or session.get('session_id')
+        if not session_id:
+            session_id = secrets.token_hex(8)
+            session['session_id'] = session_id
+
+        if session_id not in conversations:
+            conversations[session_id] = []
 
         # Sanitize and validate input
         user_query, error = sanitize_query(raw_query)
@@ -348,12 +354,23 @@ def query():
 def clear_history():
     """Clear conversation history"""
     try:
-        session_id = session.get('session_id')
+        # Support both Flask session and request body (for CORS)
+        data = request.json or {}
+        session_id = data.get('session_id') or session.get('session_id')
         if session_id and session_id in conversations:
             conversations[session_id] = []
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for deployment platforms"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'sustainability-chatbot-api'
+    })
 
 
 if __name__ == '__main__':
