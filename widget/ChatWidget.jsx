@@ -2,10 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ===========================================
-// CONFIGURATION - UPDATE THIS URL AFTER DEPLOYING TO RENDER
+// API Configuration
 // ===========================================
-const API_BASE_URL = 'https://YOUR-APP-NAME.onrender.com';
-// Example: const API_BASE_URL = 'https://sustainability-chatbot-api.onrender.com';
+const API_BASE_URL = 'https://sustainability-chatbot-api.onrender.com';
 // ===========================================
 
 const ChatWidget = () => {
