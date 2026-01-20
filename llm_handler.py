@@ -23,7 +23,7 @@ class LLMHandler:
         self.client = None
 
         if provider == "groq":
-            self.client = Groq(api_key=api_key)
+            self.client = Groq(api_key=api_key, timeout=60.0)
         elif provider == "gemini":
             import google.generativeai as genai
             genai.configure(api_key=api_key)
