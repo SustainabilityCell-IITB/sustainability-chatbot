@@ -2,7 +2,7 @@
 LLM handler module for interacting with Groq or Google Gemini API
 """
 from typing import List, Optional
-from groq import Groq
+import requests
 import time
 
 
@@ -37,7 +37,12 @@ class LLMHandler:
         self.client = None
 
         if provider == "groq":
-            self.client = Groq(api_key=api_key, timeout=60.0)
+            # Use requests directly instead of Groq SDK for better compatibility
+            self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+            self.groq_headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
         elif provider == "gemini":
             import google.generativeai as genai
             genai.configure(api_key=api_key)
@@ -70,18 +75,26 @@ ABOUT SUSTAINABILITY CELL:
 - Organizes events like Green Cup, ISR (Institute Sustainability Report), and workshops"""
 
     def _generate_groq(self, prompt: str, max_tokens: int = 1024) -> str:
-        """Generate response using Groq API with retry logic"""
+        """Generate response using Groq API with requests library"""
         def make_request():
-            response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[
+            payload = {
+                "model": self.model_name,
+                "messages": [
                     {"role": "system", "content": self._get_system_prompt()},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=max_tokens,
-                temperature=0.7
+                "max_tokens": max_tokens,
+                "temperature": 0.7
+            }
+            response = requests.post(
+                self.groq_url,
+                headers=self.groq_headers,
+                json=payload,
+                timeout=60
             )
-            return response.choices[0].message.content.strip()
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"].strip()
 
         return retry_with_backoff(make_request, max_retries=3, initial_delay=2)
 
