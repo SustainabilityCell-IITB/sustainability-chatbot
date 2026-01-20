@@ -168,9 +168,15 @@ def initialize_chatbot():
     # Create retriever with source tracking
     step = 6 if not cache_valid else 4
     print(f"\n{step}. Initializing retriever")
+    print(f"   Hybrid search: {config.USE_HYBRID_SEARCH}, Reranking: {config.USE_RERANKER}")
     try:
-        retriever = create_retriever(chunks, chunk_embeddings, chunk_sources=chunk_sources)
-        print(f"   [OK] Retriever initialized with source tracking")
+        retriever = create_retriever(
+            chunks, chunk_embeddings,
+            use_hybrid=config.USE_HYBRID_SEARCH,
+            use_reranker=config.USE_RERANKER,
+            chunk_sources=chunk_sources
+        )
+        print(f"   [OK] Retriever initialized")
     except Exception as e:
         print(f"   [ERROR] Error initializing retriever: {e}")
         raise

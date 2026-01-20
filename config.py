@@ -42,6 +42,10 @@ CHUNK_OVERLAP = 50
 TOP_K_CHUNKS = 7
 SIMILARITY_THRESHOLD = 0.30  # Lower threshold for better recall
 
+# Feature flags for memory optimization (disable for low-memory deployments)
+USE_RERANKER = os.getenv("USE_RERANKER", "false").lower() == "true"  # Disabled by default for production
+USE_HYBRID_SEARCH = os.getenv("USE_HYBRID_SEARCH", "true").lower() == "true"
+
 # Server settings
 FLASK_HOST = os.getenv("HOST", "0.0.0.0")  # 0.0.0.0 for production
 FLASK_PORT = int(os.getenv("PORT", 5000))  # Render uses PORT env var

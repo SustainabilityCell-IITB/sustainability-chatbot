@@ -11,3 +11,7 @@ services:
         value: production
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: USE_RERANKER
+        value: "false"
+      - key: USE_HYBRID_SEARCH
+        value: "true"

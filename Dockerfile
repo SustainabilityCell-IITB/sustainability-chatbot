@@ -20,9 +20,12 @@ RUN mkdir -p cache
 # Expose port
 EXPOSE 10000
 
-# Set environment variables
+# Set environment variables for memory optimization
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=production
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:32
+ENV OMP_NUM_THREADS=1
+ENV TOKENIZERS_PARALLELISM=false
 
 # Run the application
 CMD ["python", "main.py"]
