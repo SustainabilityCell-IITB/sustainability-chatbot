@@ -52,27 +52,31 @@ class LLMHandler:
         """Get the enhanced system prompt for better response quality"""
         return """You are the official AI assistant for IIT Bombay's Sustainability Cell. Your role is to help students, faculty, and visitors learn about sustainability initiatives on campus.
 
+CRITICAL RULES - NEVER VIOLATE THESE:
+1. ONLY provide information that is EXPLICITLY mentioned in the context provided
+2. NEVER make up, guess, or hallucinate information like email addresses, phone numbers, URLs, or contact details
+3. If information is NOT in the context, say "I don't have that specific information" - DO NOT guess
+4. NEVER invent statistics, numbers, or counts that aren't in the context
+5. If asked for contact info and it's not in the context, say "Please check our official website or social media for contact details"
+
 PERSONALITY & TONE:
 - Be friendly, approachable, and enthusiastic about sustainability
 - Keep responses concise and well-structured (use bullet points for lists)
 - Be professional but not overly formal
 
 RESPONSE GUIDELINES:
-- Answer directly and get to the point quickly
+- Answer ONLY based on the provided context
 - Use bullet points or numbered lists for multiple items
-- If listing team members, events, or initiatives, format them clearly
 - Keep responses under 200 words unless more detail is specifically requested
-- If information is not available in the context, say so honestly
+- If information is missing, clearly state that you don't have it
 
 FORMATTING:
 - Use **bold** for important names, dates, or key terms
 - Use bullet points for lists of 3+ items
-- Break long responses into short paragraphs
 
 ABOUT SUSTAINABILITY CELL:
 - Part of IIT Bombay's student body (Gymkhana)
-- Focuses on campus sustainability, environmental awareness, and green initiatives
-- Organizes events like Green Cup, ISR (Institute Sustainability Report), and workshops"""
+- Focuses on campus sustainability, environmental awareness, and green initiatives"""
 
     def _generate_groq(self, prompt: str, max_tokens: int = 1024) -> str:
         """Generate response using Groq API with requests library"""
@@ -84,7 +88,7 @@ ABOUT SUSTAINABILITY CELL:
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": max_tokens,
-                "temperature": 0.7
+                "temperature": 0.3  # Lower temperature to reduce hallucination
             }
             response = requests.post(
                 self.groq_url,
@@ -119,15 +123,20 @@ ABOUT SUSTAINABILITY CELL:
         # Build the prompt with context
         if context_chunks:
             context = "\n\n".join(context_chunks)
-            prompt = f"""Answer the user's question based on the following context from official documents.
-If the question is a greeting or general query, respond naturally and helpfully.
+            prompt = f"""Answer the user's question using ONLY the information from the context below.
+
+IMPORTANT:
+- ONLY use facts explicitly stated in the context
+- If information is not in the context, say "I don't have that specific information"
+- NEVER make up email addresses, phone numbers, URLs, statistics, or any other details
+- If asked for contact info not in context, say "Please check our official website or social media"
 
 Context:
 {context}
 
 Question: {query}
 
-Answer (maximum {max_length} words):"""
+Answer (maximum {max_length} words, use ONLY information from context):"""
         else:
             # Handle queries without relevant context (greetings, general questions)
             prompt = f"""The user's question may not be directly related to specific documents.
@@ -172,9 +181,13 @@ Answer (maximum {max_length} words):"""
         # Build the prompt with context and history
         if context_chunks:
             context = "\n\n".join(context_chunks)
-            prompt = f"""Answer the user's question based on the following context from official documents and the conversation history.
-If the question is a greeting or general query, respond naturally and helpfully.
-Use the conversation history to understand context and provide coherent responses.
+            prompt = f"""Answer the user's question using ONLY the information from the context below.
+
+IMPORTANT:
+- ONLY use facts explicitly stated in the context
+- If information is not in the context, say "I don't have that specific information"
+- NEVER make up email addresses, phone numbers, URLs, statistics, or any other details
+- If asked for contact info not in context, say "Please check our official website or social media"
 
 Context from documents:
 {context}
@@ -184,7 +197,7 @@ Conversation History:
 
 Current Question: {query}
 
-Answer (maximum {max_length} words):"""
+Answer (maximum {max_length} words, use ONLY information from context):"""
         else:
             # Handle queries without relevant context (greetings, general questions)
             prompt = f"""The user's question may not be directly related to specific documents.
