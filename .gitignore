@@ -33,6 +33,13 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+nul
+
+# Claude Code
+.claude/
+
+# Backup files
+*.backup
 
 # Flask
 instance/

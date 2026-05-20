@@ -17,15 +17,15 @@ COPY . .
 # Create cache directory
 RUN mkdir -p cache
 
-# Expose port
+# Expose port (7860 for Hugging Face, 10000 for Render)
+EXPOSE 7860
 EXPOSE 10000
 
-# Set environment variables for memory optimization
+# Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=production
-ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:32
-ENV OMP_NUM_THREADS=1
+ENV OMP_NUM_THREADS=2
 ENV TOKENIZERS_PARALLELISM=false
 
-# Run the application
-CMD ["python", "main.py"]
+# Run the application (uses PORT env var if set, defaults to 7860 for HF)
+CMD ["python", "app.py"]
