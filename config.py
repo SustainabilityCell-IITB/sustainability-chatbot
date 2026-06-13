@@ -35,8 +35,8 @@ GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Text processing settings
-CHUNK_SIZE = 400
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 1200
+CHUNK_OVERLAP = 100
 
 # Retrieval settings
 TOP_K_CHUNKS = 7
