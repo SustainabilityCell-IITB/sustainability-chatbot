@@ -47,7 +47,12 @@ class Embedder:
             self.load_model()
         
         # Generate embeddings
-        embeddings = self.model.encode(texts, convert_to_numpy=True)
+        embeddings = self.model.encode(
+            texts,
+            batch_size=4,
+            convert_to_numpy=True,
+            show_progress_bar=True
+        )    
         return embeddings
     
     def embed_text(self, text: str) -> np.ndarray:
