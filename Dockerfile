@@ -28,4 +28,4 @@ ENV OMP_NUM_THREADS=2
 ENV TOKENIZERS_PARALLELISM=false
 
 # Run the application (uses PORT env var if set, defaults to 7860 for HF)
-CMD ["python", "app.py"]
+CMD ["python", "main.py"]
