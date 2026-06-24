@@ -68,8 +68,11 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)  # For session management
 
 # Enable CORS for cross-origin requests (needed when frontend is on different domain)
-CORS(app, origins=config.ALLOWED_ORIGINS, supports_credentials=True)
-
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    supports_credentials=False
+)
 # Global variables for caching
 chunks = None
 chunk_sources = None
@@ -254,7 +257,7 @@ def build_contextual_query(user_query: str, conversation_history: list, max_cont
     return user_query
 
 
-@app.route('/api/query', methods=['POST'])
+@app.route('/api/query', methods=['POST', 'OPTIONS'])
 def query():
     """Handle chatbot queries with conversation history"""
     try:
