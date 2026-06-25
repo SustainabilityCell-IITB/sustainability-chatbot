@@ -260,9 +260,13 @@ def build_contextual_query(user_query: str, conversation_history: list, max_cont
 @app.route('/api/query', methods=['POST', 'OPTIONS'])
 def query():
     """Handle chatbot queries with conversation history"""
+
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
+
     try:
         # Get query from request
-        data = request.json
+        data = request.get_json(silent=True) or {}
         raw_query = data.get('query', '')
 
         # Get session ID - support both Flask session and request body (for CORS)
